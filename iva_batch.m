@@ -23,7 +23,7 @@ end
 
 %% optimize IVA filter coefficients
 W_iva = 1e3*repmat(eye(num_mic), 1, 1, 255);
-for iter = 1 : ceil(10*size(x,2)/hop_size)
+for iter = 1 : ceil(20*size(x,2)/hop_size)
     t = ceil(rand*(size(x,2) - fft_size + 1));
     X = fft(win_a .* x(:, t : t+fft_size-1), [], 2);
     X = X(:, 2:fft_size/2);
