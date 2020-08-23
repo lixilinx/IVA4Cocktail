@@ -1,7 +1,6 @@
 clear all; close all; clc
 fs = 16000; % sampling rate
 wav_len = 10*fs;
-lr = 0.02; % lr is the learning rate for separation
 Ns = [2 : 10]; % number of sources
 SIRs = zeros(2, length(Ns));
 num_iter = 50;
@@ -11,7 +10,7 @@ for iter = 1 : num_iter
         audiowrite('inputs.wav', mxts'/max(abs(mxts(:))), fs);
         %% test IVA with multi Lap and learned FNN models
         for test_case = 0 : 1
-            [y, y_gt] = iva_batch( mxts, test_case, mxts_gt, lr );
+            [y, y_gt] = iva_batch( mxts, test_case, mxts_gt );
             
             energy_gt = squeeze(sum(y_gt.^2, 3));
             all_perms = perms([1:N]); % find the best permutation

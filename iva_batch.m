@@ -1,9 +1,8 @@
-function [y, y_gt] = iva_batch( x, method, mxts_gt, lr )
+function [y, y_gt] = iva_batch( x, method, mxts_gt )
 % inputs:
 % x: mixtures
 % method: test method
 % mxts_gt: ground truth mixtures, only for SIR performance testing purpose
-% lr: learning rate
 %
 % outputs:
 % y: separated outputs
@@ -23,35 +22,37 @@ end
 
 %% optimize IVA filter coefficients
 W_iva = 1e3*repmat(eye(num_mic), 1, 1, 255);
-for iter = 1 : ceil(20*size(x,2)/hop_size)
-    t = ceil(rand*(size(x,2) - fft_size + 1));
-    X = fft(win_a .* x(:, t : t+fft_size-1), [], 2);
-    X = X(:, 2:fft_size/2);
-    
-    Y = zeros(size(X));
-    for k = 1 : 255
-        Y(:,k) = W_iva(:,:, k)*X(:,k);
-    end
-    % update the filter coefficients
-    F = zeros(num_mic, 255*2);
-    F(:, 1:2:end) = real(Y);
-    F(:, 2:2:end) = imag(Y);
-    G = F./sqrt(sum(F.*F, 2)/255 + 1e-7); % gradient in the IVA base line
-    if iva_baseline == 0
-        logE = log( sum(F.*F, 2)/255 + 1e-7 );
-        F = F./sqrt( sum(F.*F, 2)/255 + 1e-7 );
-        F = log(F(:, 1:2:end).^2 + F(:, 2:2:end).^2 + 1e-7);
-        F = tanh([F, logE, h, ones(num_mic, 1)] * W1);
-        h = F(:, 1:size(h,2));
-        F = tanh([F, ones(num_mic, 1)] * W2);
-        F = [F, ones(num_mic, 1)] * W3;
-        F = log(1 + exp(F));
-        G = kron(F, [1, 1]) .* G;
-    end
-    G = G(:, 1:2:end) + sqrt(-1)*G(:, 2:2:end);
-    for k = 1 : 255
-        grad = G(:,k)*Y(:,k)' - eye(num_mic);
-        W_iva(:,:,k) = W_iva(:,:,k) - lr*grad*W_iva(:,:,k)/sqrt(trace(grad*grad') + (num_mic - 2));
+for lr = [0.10 : -0.01 : 0.01]
+    for iter = 1 : ceil(size(x,2)/hop_size)
+        t = ceil(rand*(size(x,2) - fft_size + 1));
+        X = fft(win_a .* x(:, t : t+fft_size-1), [], 2);
+        X = X(:, 2:fft_size/2);
+        
+        Y = zeros(size(X));
+        for k = 1 : 255
+            Y(:,k) = W_iva(:,:, k)*X(:,k);
+        end
+        % update the filter coefficients
+        F = zeros(num_mic, 255*2);
+        F(:, 1:2:end) = real(Y);
+        F(:, 2:2:end) = imag(Y);
+        G = F./sqrt(sum(F.*F, 2)/255 + 1e-7); % gradient in the IVA base line
+        if iva_baseline == 0
+            logE = log( sum(F.*F, 2)/255 + 1e-7 );
+            F = F./sqrt( sum(F.*F, 2)/255 + 1e-7 );
+            F = log(F(:, 1:2:end).^2 + F(:, 2:2:end).^2 + 1e-7);
+            F = tanh([F, logE, h, ones(num_mic, 1)] * W1);
+            h = F(:, 1:size(h,2));
+            F = tanh([F, ones(num_mic, 1)] * W2);
+            F = [F, ones(num_mic, 1)] * W3;
+            F = log(1 + exp(F));
+            G = kron(F, [1, 1]) .* G;
+        end
+        G = G(:, 1:2:end) + sqrt(-1)*G(:, 2:2:end);
+        for k = 1 : 255
+            grad = G(:,k)*Y(:,k)' - eye(num_mic);
+            W_iva(:,:,k) = W_iva(:,:,k) - lr*grad*W_iva(:,:,k)/sqrt(trace(grad*grad') + (num_mic - 2));
+        end
     end
 end
 
