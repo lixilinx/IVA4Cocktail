@@ -1,6 +1,8 @@
-# IVA4Cocktail
+# [IVA4Cocktail](https://arxiv.org/abs/2008.11273)
 
-Speech density estimation for multichannel convolutive speech separation. I use independent vector analysis (IVA) as the separation framework. The code can also be used for music or other source separations. Please check the report for details.  
+Speech density estimation for multichannel convolutive speech separation. I use independent vector analysis (IVA) as the separation framework. The code can also be used for music or other source separations. Please check the report for details.
+
+Unlike the currently popular end-to-end black box speech separation methods, here, how the mixtures are separated is a well formulated optimization problem. Our focus is to learn a fine neural network density model for speech by optimization certain proxy objectives. Our resultant density model can be used in different scenarios, i.e., online or batch separation, different number of sources, artificial or realistic mixtures, etc., while an end-to-end model is typically trained for one very specific scenario.         
 
 ## Speech Density Estimation
 
@@ -14,7 +16,7 @@ Even with a memoryless density model, the whole signal process graph still defin
 
 I use [this code](https://www.mathworks.com/matlabcentral/fileexchange/5116-room-impulse-response-generator) to generate room impulse response (RIR). It is light and fast. But, as the original image source method, it cannot simulate fractional delays. So, I generate the RIR with higher sampling rate, and then decimate to the correct sampling rate. 
 
-You need to correctly set the path in 'generate_mixtures.m' to run the performance comparison simulations. Sample FNN and RNN density models prepared as in the report are included here. The neural network density models consistently outperform simple ones like multivariate Laplace or generalized Gaussian distribution.
+You need to correctly set the path in 'generate_mixtures.m' to run the performance comparison simulations. Sample FNN and RNN density models prepared as in the report are included here. The neural network density models consistently outperform simple ones like multivariate Laplace, generalized Gaussian or Student's t- distribution.
 
 ### Sample separation results
 
