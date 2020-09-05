@@ -11,14 +11,18 @@ function [y, y_gt] = iva_online( x, method, mxts_gt, lr )
 num_mic = size(x, 1);
 fft_size = 512; hop_size = 160; load fb_512_512_160;
 switch method
-    case 0 % the iva base line
-        iva_baseline = 1; 
-    case 1 % learned FNN model
-        iva_baseline = 0;
+    case 0
+        ; % Laplace
+    case 1
+        ; % Generalized Gaussian
+    case 2
+        ; % Student's t-distribution
+    case 3
+        ; % A non-spherical distribution
+    case 4 % learned FNN model
         h = zeros(num_mic, 0);
         load grad_fnn_mdl
-    case 2 % learned RNN model
-        iva_baseline = 0;
+    case 5 % learned RNN model
         h = zeros(num_mic, 128);
         load grad_rnn_mdl
     otherwise
@@ -63,23 +67,36 @@ while t+fft_size-1 <= size(x,2)
     F = zeros(num_mic, 255*2);
     F(:, 1:2:end) = real(Y);
     F(:, 2:2:end) = imag(Y);
-    G = F./sqrt(sum(F.*F, 2)/255 + 1e-7); % the gradiet in IVA base line
-    if iva_baseline == 0
-        logE = log( sum(F.*F, 2)/255 + 1e-7 );
-        F = F./sqrt( sum(F.*F, 2)/255 + 1e-7 );
-        F = log(F(:, 1:2:end).^2 + F(:, 2:2:end).^2 + 1e-7);
-        F = tanh([F, logE, h, ones(num_mic, 1)] * W1);
-        h = F(:, 1:size(h,2));
-        F = tanh([F, ones(num_mic, 1)] * W2);
-        F = [F, ones(num_mic, 1)] * W3;
-        F = log(1 + exp(F));
-        G = kron(F, [1, 1]) .* G;
+    switch method
+        case 0 % Laplace
+            G = F./sqrt(sum(F.*F, 2)/255 + 1e-7);
+        case 1 % Generalized Gaussian
+            G = F./(sum(F.*F, 2)/255 + 1e-7).^(2/3);
+        case 2 % Student's t-distribution
+            G = F./(sum(F.*F, 2)/255 + 1e-7);
+        case 3 % a non-spherical distribution
+            G = zeros(size(F));
+            G(:,1:64) = G(:,1:64) + F(:,1:64)./sqrt(sum(F(:,1:64).*F(:,1:64), 2)/32 + 1e-7);
+            G(:,33:128) = G(:,33:128) + F(:,33:128)./sqrt(sum(F(:,33:128).*F(:,33:128), 2)/48 + 1e-7);
+            G(:,65:256) = G(:,65:256) + F(:,65:256)./sqrt(sum(F(:,65:256).*F(:,65:256), 2)/96 + 1e-7);
+            G(:,129:510) = G(:,129:510) + F(:,129:510)./sqrt(sum(F(:,129:510).*F(:,129:510), 2)/191 + 1e-7);
+        otherwise % learned FNN or RNN model
+            G = F./sqrt(sum(F.*F, 2)/255 + 1e-7);
+            logE = log( sum(F.*F, 2)/255 + 1e-7 );
+            F = F./sqrt( sum(F.*F, 2)/255 + 1e-7 );
+            F = log(F(:, 1:2:end).^2 + F(:, 2:2:end).^2 + 1e-7);
+            F = tanh([F, logE, h, ones(num_mic, 1)] * W1);
+            h = F(:, 1:size(h,2));
+            F = tanh([F, ones(num_mic, 1)] * W2);
+            F = [F, ones(num_mic, 1)] * W3;
+            F = log(1 + exp(F));
+            G = kron(F, [1, 1]) .* G;
     end
     G = G(:, 1:2:end) + sqrt(-1)*G(:, 2:2:end);
     for k = 1 : 255
         grad = G(:,k)*Y(:,k)' - eye(num_mic);
         W_iva(:,:,k) = W_iva(:,:,k) - lr*grad*W_iva(:,:,k)/sqrt(trace(grad*grad') + (num_mic - 2));
-    end  
+    end
     
     t = t + hop_size;
 end
