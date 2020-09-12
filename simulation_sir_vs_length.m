@@ -10,7 +10,7 @@ for iter = 1 : num_iter
         %audiowrite('inputs.wav', mxts'/max(abs(mxts(:))), fs);
         %% test IVA with different source priors
         for test_case = 0 : 4
-            [y, y_gt] = copy_iva_batch( mxts, test_case, mxts_gt );
+            [y, y_gt] = iva_batch( mxts, test_case, mxts_gt ); % need to halve the learning rate in iva_batch for student's t source prior
             
             energy_gt = squeeze(sum(y_gt.^2, 3));
             all_perms = perms([1:N]); % find the best permutation
