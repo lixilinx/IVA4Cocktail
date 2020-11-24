@@ -1,33 +1,23 @@
 # [IVA4Cocktail](https://arxiv.org/abs/2008.11273)
 
-Speech density estimation for multichannel convolutive speech separation. I use independent vector analysis (IVA) as the separation framework. The code can also be used for music or other source separations. Please check the report for details.
+Speech density estimation for multichannel convolutive speech/music separation. I use independent vector analysis (IVA) as the separation framework. Please check the report for details.
 
-Unlike the currently popular end-to-end black box speech separation methods, here, how the mixtures are separated is a well formulated optimization problem. Our focus is to learn a fine neural network density model for speech by optimization certain proxy objectives. Our resultant density model can be used in different scenarios, i.e., online or batch separation, different number of sources, artificial or realistic mixtures, etc., while an end-to-end model is typically trained for one very specific scenario.         
+Please use the [archived old code](https://github.com/lixilinx/IVA4Cocktail/releases/tag/v1) to reproduce the results reported [here](https://arxiv.org/abs/2008.11273v2). I rewrote the code to make it more organized.
 
-## Speech Density Estimation
+Unlike the popular end-to-end supervised speech separation methods, the target here is to learn a neural network density model for unsupervised separation. The resultant density model can be used for, to name a few, online or batch separation, separation of different number of sources, separation of artificial or realistic mixtures, without the need to retrain any different specific supervised separation model.           
 
-You need to correctly set the path parameter for WavLoader in 'main.py' to train the density model. 
+### On the Pytorch training code
 
-Set dim_h = 0 to get a feedforward neural network (FNN) density model, and 1 <= dim_h <= dim_f to get a recurrent neural network (RNN) density model. Redefine grad_nll to train a different density model.  
+dnn_source_priors.py: a circular source model is defined there. If one wants to recover the phase of each bin as well, noncircular density model must be used. Recovering of phase (up to certain global rotation ambiguity) is nontrivial since this will deconvole/dereverberate the speech. This is achieved by forcing the reconstructed speech using the estimated phases to be coherent with the original source as well. 
 
-Even with a memoryless density model, the whole signal process graph still defines a deep recurrent network due to the way to update the separation matrices. Momentum and first order optimization methods seem perform not very well (might not with the best hyperparameters in my trials). A [second order method](https://ieeexplore.ieee.org/document/7875097) saves the hyperparameter tuning effort. 
+losses.py: except for the standard coherence loss, a symmetric Itakura–Saito distance loss can be used to recover the amplitude of speech as well (of course, up to a certain global scaling ambiguity). Pre-emphasizing the high frequencies can make the amplitude modeling easier (set the lpc in artificial_mixture_generator.py properly).
 
-## Separation Performance Comparisons
+short_time_Fourier_transform.py: this should work with Pytorch's old and new FFT APIs. I still use the old view_as_real format for complex numbers.  
 
-I use [this code](https://www.mathworks.com/matlabcentral/fileexchange/5116-room-impulse-response-generator) to generate room impulse response (RIR). It is light and fast. But, as the original image source method, it cannot simulate fractional delays. So, I generate the RIR with higher sampling rate, and then decimate to the correct sampling rate. 
+preconditioned_stochastic_gradient_descent.py: this is a [second order optimizer](https://ieeexplore.ieee.org/document/7875097). I use it mainly to save those hyperparameter tuning efforts.  
 
-You need to correctly set the path in 'generate_mixtures.m' to run the performance comparison simulations. Sample FNN and RNN density models prepared as in the report are included here. The neural network density models consistently outperform simple ones like multivariate Laplace and a non-spherical distributions (from Te-Won Lee's group), generalized Gaussian and Student's t- distribution (from Jonathon Chambers' group).
+Lastly, demo.m is a Matlab/Octave file showing the usage of a trained circular density model with the default settings in config.py. There are some pre-designed window functions by [this method](https://ieeexplore.ieee.org/document/8304771).
 
-#### Convergence speed comparison, two sources
-![alt text](https://github.com/lixilinx/IVA4Cocktail/blob/master/sir_vs_time.png)
+### Some sample separation results for subjective comparison (using the density model in the archived old code)
 
-#### Efficiency comparison 1, 10 s speech length
-![alt text](https://github.com/lixilinx/IVA4Cocktail/blob/master/sir_vs_N.png)
-
-#### Efficiency comparison 2, three sources 
-Need to halve the step size in iva_batch, otherwise, the t-distribution prior may cause divergence.
-![alt text](https://github.com/lixilinx/IVA4Cocktail/blob/master/sir_vs_length.png)
-
-#### Sample separation results for subjective comparison
-
-[These](https://drive.google.com/file/d/18xrjgKNbWOnl0t_w0XnsB0zOr4EOWpX-/view?usp=sharing) are some typical mixtures and separation results of 10 sources with length 10 second. The neural network density models always have better subjective separation performance, even for the first set of sample results, where the signal to interference ratio (SIR) of multivariate Laplace model is 0.3 dB higher than that of neural network one. One reason is that SIR is not very sensitive to errors like the low pass and high pass bands permutations since most speech energy locates in low frequency band, while human ears are picky.
+[These](https://drive.google.com/file/d/18xrjgKNbWOnl0t_w0XnsB0zOr4EOWpX-/view?usp=sharing) are some typical mixtures with simulated RIRs and separation results of 10 sources with length 10 second. The neural network density models always have better subjective separation performance, even for the first set of sample results, where the signal to interference ratio (SIR) of multivariate Laplace model is 0.3 dB higher than that of neural network one. One reason is that SIR is not very sensitive to errors like the low pass and high pass bands permutations since most speech energy locates in low frequency band, while human ears are picky.
