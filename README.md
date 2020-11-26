@@ -2,15 +2,15 @@
 
 Speech density estimation for multichannel convolutive speech/music separation. I use independent vector analysis (IVA) as the separation framework. Please check the report for details.
 
-Please use the [archived old code](https://github.com/lixilinx/IVA4Cocktail/releases/tag/v1) to reproduce the results reported [here](https://arxiv.org/abs/2008.11273v2). I rewrote the code to make it more organized.
+Please use the [archived old code](https://github.com/lixilinx/IVA4Cocktail/releases/tag/v1) to reproduce the results reported [here](https://arxiv.org/abs/2008.11273v2). I rewrote the code to make it more organized and useful.
 
 Unlike the popular end-to-end supervised speech separation methods, the target here is to learn a neural network density model for unsupervised separation. The resultant density model can be used for, e.g., online or batch separation, separation of different number of sources, separation of artificial or realistic mixtures, without the need to retrain any different specific supervised separation model.           
 
 ### On the Pytorch training code
 
-artificial_mixture_generator.py: the actual mixing matrix is inv(a_FIR_system) * (another_FIR_system) since we change the mixing matrix constantly. 
+artificial_mixture_generator.py: the actual mixing matrix is inv(a_FIR_system) * (another_FIR_system) since we change the mixing matrix constantly and natural gradient descent works on the combined separation-mixing matrix. 
 
-dnn_source_priors.py: a memoryless circular source model is defined there. If one wants to recover the phase of each bin as well, noncircular density model must be used. Recovering of phase (up to certain global rotation ambiguity) is nontrivial since this will deconvole/dereverberate the speech. This is achieved by forcing the reconstructed speech using the estimated phases to be coherent with the original source as well. 
+dnn_source_priors.py: simple circular and noncircular source models are defined. If one wants to recover the phase of each bin as well, noncircular model must be used. Recovering of phase (up to certain global rotation ambiguity) is nontrivial since this will deconvole/dereverberate the speech. This is achieved by forcing the reconstructed speech using the estimated phases to be coherent with the original source as well. Still, a light memoryless circular model seems to be good enough most of the time. 
 
 losses.py: except for the standard coherence loss, a symmetric Itakura–Saito distance loss can be used to recover the amplitude of speech as well (of course, up to a certain global scaling ambiguity). Pre-emphasizing the high frequencies can make the amplitude modeling easier (set the LPC in artificial_mixture_generator.py properly).
 
